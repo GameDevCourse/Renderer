@@ -13,10 +13,12 @@ namespace engine {
 
 
     export interface Drawable {
-        draw(context2D: CanvasRenderingContext2D);
+        update();
     }
 
-    export abstract class DisplayObject implements Drawable {
+    export abstract class DisplayObject {
+
+        type = "DisplayObject";
 
         x = 0;
 
@@ -40,7 +42,8 @@ namespace engine {
 
         touchEnabled: boolean;
 
-        constructor() {
+        constructor(type: string) {
+            this.type = type;
             this.localMatrix = new Matrix();
             this.globalMatrix = new Matrix();
         }
@@ -50,7 +53,7 @@ namespace engine {
 
 
         // 模板方法模式        
-        draw(context2D: CanvasRenderingContext2D) {
+        update() {
             this.localMatrix.updateFromDisplayObject(this.x, this.y, this.scaleX, this.scaleY, this.rotation);
             if (this.parent) {
                 this.globalMatrix = matrixAppendMatrix(this.localMatrix, this.parent.globalMatrix);
@@ -58,24 +61,15 @@ namespace engine {
             else {
                 this.globalMatrix = this.localMatrix;
             }
-            context2D.setTransform(this.globalMatrix.a, this.globalMatrix.b, this.globalMatrix.c, this.globalMatrix.d, this.globalMatrix.tx, this.globalMatrix.ty);
-
             if (this.parent) {
                 this.globalAlpha = this.parent.globalAlpha * this.alpha;
             }
             else {
                 this.globalAlpha = this.alpha;
             }
-            context2D.globalAlpha = this.globalAlpha;
-            this.render(context2D);
-
         }
 
         abstract hitTest(x: number, y: number): DisplayObject
-
-        abstract render(context2D: CanvasRenderingContext2D)
-
-
     }
 
 
@@ -83,9 +77,8 @@ namespace engine {
 
         image: HTMLImageElement;
 
-
-        render(context2D: CanvasRenderingContext2D) {
-            context2D.drawImage(this.image, 0, 0);
+        constructor() {
+            super("Bitmap");
         }
 
         hitTest(x: number, y: number) {
@@ -114,20 +107,16 @@ namespace engine {
 
     }
 
-    class TextField extends DisplayObject {
+    export class TextField extends DisplayObject {
 
         text: string = "";
 
-        private _measureTextWidth: number = 0;
-
-        render(context2D: CanvasRenderingContext2D) {
-            context2D.fillText(this.text, 0, 10);
-            this._measureTextWidth = context2D.measureText(this.text).width;
+        constructor() {
+            super("TextField");
         }
 
         hitTest(x: number, y: number) {
             var rect = new Rectangle();
-            rect.width = this._measureTextWidth;
             rect.height = 20;
             var point = new Point(x, y);
             if (rect.isPointInRectangle(point)) {
@@ -141,11 +130,16 @@ namespace engine {
 
     export class DisplayObjectContainer extends DisplayObject {
 
+        constructor() {
+            super("DisplayObjectContainer");
+        }
+
         children: DisplayObject[] = [];
 
-        render(context2D) {
+        update() {
+            super.update();
             for (let drawable of this.children) {
-                drawable.draw(context2D);
+                drawable.update();
             }
         }
 
